@@ -6,11 +6,11 @@ const initialState = {
     error: null,
   };
   
-  const usersSlice = createSlice({
+  const userListSlice = createSlice({
     name: "users",
     initialState,
     reducers: {},
   });
   
-  export const usersReducer =  usersSlice.reducer;
+  export const userListReducer =  userListSlice.reducer;
   
