@@ -1,7 +1,12 @@
-import { useState } from 'react'
+import { useEffect } from 'react';
 import { Button, Table } from 'antd';
+import { useNavigate } from 'react-router-dom';
+import { deleteDoc, doc } from 'firebase/firestore';
+import { db } from '../config/firebaseConfig';
+import { deleteUser, fetchUsers } from './userListSlice';
+import { RootState, useAppDispatch, useAppSelector } from '../store/store';
 
-interface User {
+export interface User {
     id: string;
     name: string;
     email: string;
@@ -9,14 +14,17 @@ interface User {
 }
 
 export const UserList = () => {
-    const [users, setUsers] = useState<User[]>([
-        { id: "1", name: "Иван Иванов", email: "ivan@example.com", age: 25 },
-        { id: "2", name: "Мария Петрова", email: "maria@example.com", age: 30 },
-        { id: "3", name: "Алексей Сидоров", email: "alex@example.com", age: 28 }
-    ]);
+    const navigate = useNavigate();
+    const dispatch = useAppDispatch();
+    const { users, status, error } = useAppSelector((state: RootState) => state.users);
 
-    const handleDelete = (id: string) => {
-        setUsers(users.filter(user => user.id !== id));
+    useEffect(() => {
+        dispatch(fetchUsers());
+    }, [dispatch]);
+
+    const handleDelete = async (id: string) => {
+        await deleteDoc(doc(db, "users", id));
+        dispatch(deleteUser(id));
     };
 
     const columns = [
@@ -27,17 +35,21 @@ export const UserList = () => {
             title: "Действия",
             key: "actions",
             render: (record: User) => (
-                <div style={{display: "flex", gap: "30px"}}>
-                    <Button onClick={() => handleDelete(record.id)} type="default">Редактировать</Button>
+                <div style={{ display: "flex", gap: "30px" }}>
+                    <Button onClick={() => navigate(`/edit/${record.id}`)} type="default">Редактировать</Button>
                     <Button onClick={() => handleDelete(record.id)} type="default" danger>Удалить</Button>
                 </div>
             )
         }
     ];
-console.log(users);
+
+    if (status === "loading") return <p>Загрузка...</p>;
+    if (error) return <p>Ошибка: {error}</p>;
+
     return (
         <div>
-            <Table dataSource={users.map(user => ({ ...user, key: user.id }))} columns={columns} style={{}} />
+            <Table dataSource={users.map(user => ({ ...user, key: user.id }))} columns={columns} />
+            <Button onClick={() => navigate("/create")} type="primary" style={{ marginTop: 16 }}>Добавить пользователя</Button>
         </div>
     );
 }
