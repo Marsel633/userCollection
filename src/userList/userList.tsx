@@ -5,8 +5,9 @@ import { deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../config/firebaseConfig';
 import { deleteUser, fetchUsers } from './userListSlice';
 import { RootState, useAppDispatch, useAppSelector } from '../store/store';
+import { toast } from 'react-toastify';
 
-export interface User {
+export interface IUser {
     id: string;
     name: string;
     email: string;
@@ -25,6 +26,7 @@ export const UserList = () => {
     const handleDelete = async (id: string) => {
         await deleteDoc(doc(db, "users", id));
         dispatch(deleteUser(id));
+        toast.success("Пользователь успешно удален!")
     };
 
     const columns = [
@@ -34,7 +36,7 @@ export const UserList = () => {
         {
             title: "Действия",
             key: "actions",
-            render: (record: User) => (
+            render: (record: IUser) => (
                 <div style={{ display: "flex", gap: "30px" }}>
                     <Button onClick={() => navigate(`/edit/${record.id}`)} type="default">Редактировать</Button>
                     <Button onClick={() => handleDelete(record.id)} type="default" danger>Удалить</Button>
@@ -48,7 +50,7 @@ export const UserList = () => {
 
     return (
         <div>
-            <Table dataSource={users.map(user => ({ ...user, key: user.id }))} columns={columns} />
+            <Table dataSource={users} columns={columns} />
             <Button onClick={() => navigate("/create")} type="primary" style={{ marginTop: 16 }}>Добавить пользователя</Button>
         </div>
     );
