@@ -40,6 +40,7 @@ export const UserList = () => {
                 <div style={{ display: "flex", gap: "30px" }}>
                     <Button onClick={() => navigate(`/edit/${record.id}`)} type="default">Редактировать</Button>
                     <Button onClick={() => handleDelete(record.id)} type="default" danger>Удалить</Button>
+                    <Button onClick={() => navigate(`/user/${record.id}`)} type="default">Информация</Button>
                 </div>
             )
         }
@@ -50,7 +51,7 @@ export const UserList = () => {
 
     return (
         <div>
-            <Table dataSource={users} columns={columns} />
+            <Table dataSource={users} columns={columns} pagination={{pageSize: 5}} rowKey="id"/>
             <Button onClick={() => navigate("/create")} type="primary" style={{ marginTop: 16 }}>Добавить пользователя</Button>
         </div>
     );
