@@ -1,11 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Button, Input, InputNumber } from "antd";
+import { Button, Input, InputNumber, Spin } from "antd";
 import { useForm, Controller, SubmitHandler } from "react-hook-form";
-import { db } from "../config/firebaseConfig";
-import { doc, updateDoc } from "firebase/firestore";
 import { useAppDispatch, useAppSelector } from "../store/store";
-import { fetchUsers } from "../userList/userListSlice";
+import { getUserById, updateUser } from "../userList/userListSlice";
 import { toast } from "react-toastify";
 
 interface IFormInputs {
@@ -18,23 +16,14 @@ export const EditUser = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { users } = useAppSelector((state) => state.users);
-
-  const [user, setUser] = useState<{
-    id: string;
-    name: string;
-    email: string;
-    age: number;
-  } | null>(null);
+  const { users, status } = useAppSelector((state) => state.users);
+  const user = users.find((user) => user.id === id);
 
   useEffect(() => {
-    const foundUser = users.find((user) => user.id === id);
-    if (foundUser) {
-      setUser(foundUser);
-    } else {
-      dispatch(fetchUsers());
+    if (!user && id) {
+      dispatch(getUserById(id));
     }
-  }, [dispatch, id, users]);
+  }, [dispatch, id, user]);
 
   const {
     control,
@@ -52,21 +41,15 @@ export const EditUser = () => {
   }, [user, setValue]);
 
   const onSubmit: SubmitHandler<IFormInputs> = async (values) => {
-    console.log(values);
-    if (user) {
-      const userRef = doc(db, "users", user.id);
-      await updateDoc(userRef, {
-        name: values.name,
-        email: values.email,
-        age: values.age,
-      });
+    if (id) {
+      await dispatch(updateUser({ id, ...values }));
+      toast.success("Данные успешно обновлены!");
       navigate("/");
     }
-    toast.success("Данные успешно обновлены!")
   };
 
-  if (!user) {
-    return <p>Загрузка...</p>;
+  if (status === "loading") {
+    return <Spin size="large" />;
   }
 
   return (
@@ -78,7 +61,7 @@ export const EditUser = () => {
           <Controller
             name="name"
             control={control}
-            render={({ field }) => <Input {...field} placeholder={user.name} />}
+            render={({ field }) => <Input {...field} />}
           />
           {errors.name && <p>{errors.name.message}</p>}
         </div>
@@ -87,9 +70,7 @@ export const EditUser = () => {
           <Controller
             name="email"
             control={control}
-            render={({ field }) => (
-              <Input {...field} placeholder={user.email} />
-            )}
+            render={({ field }) => <Input {...field} />}
           />
           {errors.email && <p>{errors.email.message}</p>}
         </div>
@@ -100,12 +81,7 @@ export const EditUser = () => {
             control={control}
             rules={{ required: "Пожалуйста, введите возраст!", min: 0 }}
             render={({ field }) => (
-              <InputNumber
-                {...field}
-                min={0}
-                defaultValue={user.age}
-                style={{ width: "100%" }}
-              />
+              <InputNumber {...field} min={0} style={{ width: "100%" }} />
             )}
           />
           {errors.age && <p>{errors.age.message}</p>}

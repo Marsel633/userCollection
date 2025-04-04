@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Button, Table } from 'antd';
+import { Button, Spin, Table } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../config/firebaseConfig';
@@ -46,7 +46,7 @@ export const UserList = () => {
         }
     ];
 
-    if (status === "loading") return <p>Загрузка...</p>;
+    if (status === "loading") return <Spin size="large" />;
     if (error) return <p>Ошибка: {error}</p>;
 
     return (

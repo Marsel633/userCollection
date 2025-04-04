@@ -1,17 +1,19 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-import { deleteDoc, doc } from "firebase/firestore";
+import { deleteDoc, doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "../config/firebaseConfig";
 import { IUser } from "./userList";
 import axios from "axios";
 
 interface IUsersState {
   users: IUser[];
+  selectedUser: IUser | null;
   status: "idle" | "loading" | "succeeded" | "failed";
   error: string | null;
 }
 
 const initialState: IUsersState = {
   users: [],
+  selectedUser: null,
   status: "idle",
   error: null,
 };
@@ -88,6 +90,39 @@ export const deleteUser = createAsyncThunk(
   }
 );
 
+export const updateUser = createAsyncThunk<
+  IUser,
+  { id: string; name: string; email: string; age: number }
+>("users/updateUser", async ({ id, name, email, age }, { rejectWithValue }) => {
+  try {
+    const userRef = doc(db, "users", id);
+    await updateDoc(userRef, { name, email, age });
+
+    return { id, name, email, age };
+  } catch (error) {
+    return rejectWithValue((error as Error).message);
+  }
+});
+
+export const getUserById = createAsyncThunk<IUser, string>(
+  "users/getUserById",
+  async (id, { rejectWithValue }) => {
+    try {
+      const userRef = doc(db, "users", id);
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists()) {
+        throw new Error("Пользователь не найден");
+      }
+
+      const userData = userSnap.data() as Omit<IUser, "id">;
+      return { id, ...userData };
+    } catch (error) {
+      return rejectWithValue((error as Error).message);
+    }
+  }
+);
+
 const userListSlice = createSlice({
   name: "users",
   initialState,
@@ -112,6 +147,11 @@ const userListSlice = createSlice({
         state.users = state.users.filter((user) => user.id !== action.payload);
         state.status = "succeeded";
       })
+      .addCase(deleteUser.rejected, (state, action) => {
+        state.status = "failed";
+        state.error =
+          action.error.message || "Ошибка при удалении пользователя";
+      })
       .addCase(
         addUser.fulfilled,
         (state, { payload }: PayloadAction<IUser>) => {
@@ -122,8 +162,34 @@ const userListSlice = createSlice({
       .addCase(addUser.pending, (state) => {
         state.status = "loading";
       })
-      .addCase(addUser.rejected, (state) => {
+      .addCase(addUser.rejected, (state, action) => {
         state.status = "failed";
+        state.error =
+          action.error.message || "Ошибка при добавлении пользователя";
+      })
+      .addCase(updateUser.fulfilled, (state, { payload }) => {
+        state.users = state.users.map((user) =>
+          user.id === payload.id ? payload : user
+        );
+        state.status = "succeeded";
+      })
+      .addCase(updateUser.pending, (state) => {
+        state.status = "loading";
+      })
+      .addCase(updateUser.rejected, (state, action) => {
+        state.status = "failed";
+        state.error = action.error.message || "Ошибка при обновлении данных";
+      })
+      .addCase(getUserById.fulfilled, (state, action: PayloadAction<IUser>) => {
+        state.selectedUser = action.payload;
+        state.status = "succeeded";
+      })
+      .addCase(getUserById.pending, (state) => {
+        state.status = "loading";
+      })
+      .addCase(getUserById.rejected, (state, action) => {
+        state.status = "failed";
+        state.error = action.error.message || "Ошибка загрузки пользователя";
       });
   },
 });
